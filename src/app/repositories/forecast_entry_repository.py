@@ -1,5 +1,3 @@
-import uuid
-from typing import Any
 import pandas as pd
 from psycopg2.extensions import cursor
 from uuid_utils import uuid7, UUID

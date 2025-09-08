@@ -23,7 +23,6 @@ class SaleRepository:
                 AND deleted_at IS NULL
         """
 
-        # ✅ pass cutoff_date to the query
         self.cur.execute(sql, (str(product_id), cutoff_date))
         rows = self.cur.fetchall()
 

@@ -18,4 +18,6 @@ class ProductSettingRepository:
         """
         self.cur.execute(sql, (str(product_id),))
         row = self.cur.fetchone()
+        if row is None:
+            return None
         return ProductSetting(row[0],row[1],row[2])
