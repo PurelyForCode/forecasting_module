@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from api.routes_forecast import forecast_router
+from uuid_utils import UUID
 
 app = FastAPI()
 

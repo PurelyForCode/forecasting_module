@@ -17,20 +17,6 @@ from src.app.models.product_setting import ProductSetting
 
 
 class ForecastService:
-    def __init__(
-            self,
-            sale_repository: SaleRepository,
-            product_setting_repository: ProductSettingRepository,
-            forecast_entry_repository: ForecastEntryRepository,
-            product_repository: ProductRepository,
-            forecast_repository: ForecastRepository
-    ):
-        self.sale_repository = sale_repository
-        self.product_setting_repository = product_setting_repository
-        self.forecast_entry_repository = forecast_entry_repository
-        self.product_repository = product_repository
-        self.forecast_repository = forecast_repository
-
 
     def _fast_product_forecast(self, sales: list[Sale], start_date: date, end_date: date):
         df = pd.DataFrame([{"ds": s.date, "y": s.quantity} for s in sales])
