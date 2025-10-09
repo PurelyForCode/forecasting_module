@@ -1,12 +1,10 @@
 from dataclasses import dataclass
 from datetime import date
-from uuid import UUID
-
 
 @dataclass
 class Sale:
-    id: UUID
-    product_id: UUID
+    id: str
+    product_id: str
     quantity: int
     status: str
     date: date

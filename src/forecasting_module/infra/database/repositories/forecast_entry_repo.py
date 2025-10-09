@@ -1,28 +1,28 @@
 import pandas as pd
-from psycopg2.extensions import cursor
-from uuid_utils import uuid7, UUID
+from psycopg.cursor import Cursor
 from typing import List, Tuple
+from uuid_utils import uuid7
 
 class ForecastEntryRepository:
-    def __init__(self, cur: cursor):
+    def __init__(self, cur: Cursor):
         self.cur = cur
 
-    def save_forecast_dataframe(self, sales_forecast_id: UUID, forecast_df: pd.DataFrame) -> None:
-        rows: List[Tuple[str, str, float, float, float, object]] = []
+    def save_forecast_dataframe(self, forecast_id: str, forecast_df: pd.DataFrame) -> None:
+        rows: List[Tuple[str, str, float, float, float, str]] = []
         for _, row in forecast_df.iterrows():
             rows.append((
-                str(uuid7()),                 # id
-                str(sales_forecast_id),       # sales_forecast_id
-                float(row["yhat"]),           # prediction
-                float(row["yhat_upper"]),     # upper bound
-                float(row["yhat_lower"]),     # lower bound
-                row["ds"].date()              # date (DATE type in DB)
+                str(uuid7()),
+                str(forecast_id),
+                float(row["yhat"]),           
+                float(row["yhat_upper"]),     
+                float(row["yhat_lower"]),     
+                str(row["ds"]),
             ))
 
 
         insert_query = """
-            INSERT INTO sales_forecast_entry (
-                id, sales_forecast_id, yhat, yhat_upper, yhat_lower, date
+            INSERT INTO forecast_entry (
+                id, forecast_id, yhat, yhat_upper, yhat_lower, date
             ) VALUES (%s, %s, %s, %s, %s, %s)
         """
         self.cur.executemany(insert_query, rows)

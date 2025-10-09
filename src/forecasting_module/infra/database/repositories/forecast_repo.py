@@ -1,11 +1,9 @@
-from psycopg2.extensions import cursor
-from uuid_utils import UUID
+from psycopg.cursor import Cursor
 from forecasting_module.domain.entities.forecast import Forecast
 from typing import Optional, Tuple, Any
 
-
 class ForecastRepository:
-    def __init__(self, cur: cursor):
+    def __init__(self, cur: Cursor):
         self.cur = cur
 
     def create_forecast(self, forecast: Forecast):
@@ -14,8 +12,7 @@ class ForecastRepository:
             id,
             product_id,
             account_id,
-            data_start_date,
-            data_end_date,
+            data_depth,
             forecast_start_date,
             forecast_end_date,
             processed,
@@ -23,7 +20,7 @@ class ForecastRepository:
             updated_at,
             deleted_at
         ) VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
         )
         """
         self.cur.execute(
@@ -32,8 +29,7 @@ class ForecastRepository:
                 forecast.id,
                 forecast.product_id,
                 forecast.account_id,
-                forecast.data_start_date,
-                forecast.data_end_date,
+                forecast.data_depth,
                 forecast.forecast_start_date,
                 forecast.forecast_end_date,
                 False,
@@ -43,27 +39,27 @@ class ForecastRepository:
             ),
         )
 
-    def get_forecast(self, sales_forecast_id: UUID) -> Optional[Forecast]:
+    def get_forecast(self, sales_forecast_id: str) -> Optional[Forecast]:
         sql = """
-        SELECT  
-            id,
-            product_id,
-            account_id,
-            data_start_date,
-            data_end_date,
-            forecast_start_date,
-            forecast_end_date,
-            created_at,
-            updated_at,
-        from forecast
-        WHERE 
-            id = %s
-        AND deleted_at IS NULL"""
-        self.cur.execute(sql, str(sales_forecast_id))
+            SELECT  
+                id,
+                product_id,
+                account_id,
+                data_depth,
+                forecast_start_date,
+                forecast_end_date,
+                created_at,
+                updated_at
+            from forecast
+            WHERE 
+                id = %s
+            AND deleted_at IS NULL
+        """
+        self.cur.execute(sql, (str(sales_forecast_id),))
         row: Optional[Tuple[Any, ...]] = self.cur.fetchone()
         if row is None:
             return None
         forecast = Forecast(
-            row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], None
+            row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], None
         )
         return forecast
