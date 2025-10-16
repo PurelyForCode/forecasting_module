@@ -99,7 +99,4 @@ class GenerateSingleForecastUsecase:
 
         self.forecast_entry_repo.save_forecast_dataframe(forecast.id, future)
 
-        return {
-            "message": "Forecast generated successfully",
-            "forecast_id": str(forecast.id)
-        }
+        return str(forecast.id)

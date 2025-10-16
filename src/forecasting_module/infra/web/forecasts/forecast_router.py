@@ -16,6 +16,7 @@ async def generate_forecast(
     product_id: str,
     body: GenerateSingleForecastBody
 ):  
+    forecast_id = None
     with pool.connection() as conn:
         with conn.cursor() as cur:
             product_repo = ProductRepository(cur)
@@ -30,7 +31,7 @@ async def generate_forecast(
                 setting_repo, 
                 forecast_entry_repo
             )
-            usecase.handle(
+            forecast_id = usecase.handle(
                 {
                     "account_id": body.account_id, 
                     "data_depth": body.data_depth, 
@@ -40,4 +41,4 @@ async def generate_forecast(
                     "product_id": product_id
                 }
             )
-    return {"message": "ok"}
+    return { "data": forecast_id }

@@ -12,8 +12,7 @@ class ProductRepository:
 
     def find_one_by_id(self, id: str) -> Product | None:
         self.cur.execute(
-            "SELECT id, sale_count FROM product WHERE id = %s AND deleted_at IS NULL",
-            (id,),
+            "SELECT id, sale_count FROM product WHERE id = %s AND deleted_at IS NULL", (id,)
         )
         row = self.cur.fetchone()
         return self.to_entity(row) if row else None
