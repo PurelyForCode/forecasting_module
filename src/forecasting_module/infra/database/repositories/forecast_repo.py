@@ -45,6 +45,9 @@ class ForecastRepository:
                 id,
                 product_id,
                 account_id,
+                prophet_model_id,
+                croston_model_id,
+                model_type,
                 data_depth,
                 forecast_start_date,
                 forecast_end_date,
@@ -60,6 +63,6 @@ class ForecastRepository:
         if row is None:
             return None
         forecast = Forecast(
-            row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], None
+            row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8],row[9], row[10], None
         )
         return forecast
