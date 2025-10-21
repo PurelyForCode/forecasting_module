@@ -64,15 +64,19 @@ class GenerateSingleForecastUsecase:
         # Convert to DataFrame for aggregation
         df = pd.DataFrame([{"ds": s.date, "y": s.quantity} for s in sales])
 
-        # Aggregate and fill missing dates
+        # Ensure proper datetime type
+        df["ds"] = pd.to_datetime(df["ds"])
 
+        # Create a complete daily range between the first and last sales date
+        full_range = pd.date_range(df["ds"].min(), df["ds"].max(), freq="D")
+
+        # Reindex to include missing dates and fill with 0s
         df = (
-            df.groupby("ds")["y"]
-            .sum()
-            .reindex(pd.date_range(df["ds"].min(), df["ds"].max(), freq="D"), fill_value=0)
-            .reset_index(names="ds")
-        )  # pyright: ignore
-
+            df.set_index("ds")
+              .reindex(full_range, fill_value=0)
+              .rename_axis("ds")
+              .reset_index()
+        )
 
         if len(df) <= 30:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail={"message": "Not enough data (min 30 days)"})

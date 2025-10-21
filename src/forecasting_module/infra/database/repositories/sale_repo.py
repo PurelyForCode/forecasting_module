@@ -25,18 +25,19 @@ class SaleRepository:
     ) -> list[Sale]:
         sql = """
             SELECT 
-                id, 
-                product_id, 
-                quantity, 
-                status, 
-                date 
-            FROM sale 
+                SUM(quantity) AS total_quantity,
+                date
+            FROM sale
             WHERE 
-                product_id = %s 
+                product_id = %s
                 AND deleted_at IS NULL
                 AND date BETWEEN %s AND %s
+            GROUP BY product_id, date
             ORDER BY date ASC
         """
         self.cur.execute(sql, (product_id, start_date, end_date))
         rows = self.cur.fetchall()
-        return [Sale(*row) for row in rows]
+        return [Sale(row[0], row[1]) for row in rows]
+
+
+

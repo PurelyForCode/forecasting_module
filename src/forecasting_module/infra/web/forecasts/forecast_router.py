@@ -34,6 +34,7 @@ async def generate_forecast(
             forecast_id = usecase.handle(
                 {
                     "account_id": body.account_id, 
+                    "forecast_id": body.forecast_id,
                     "data_depth": body.data_depth, 
                     "forecast_end_date": body.forecast_end_date, 
                     "forecast_start_date": body.forecast_start_date, 
