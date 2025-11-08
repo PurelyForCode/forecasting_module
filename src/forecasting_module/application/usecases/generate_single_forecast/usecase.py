@@ -99,12 +99,8 @@ class GenerateSingleForecastUsecase:
                 forecast_end_date=input["forecast_end_date"]
             )
         else:
-            future = forecast_mgr.croston_forecast(
-                sales=df, 
-                alpha=0.1,
-                forecast_start_date=input["forecast_start_date"] ,
-                forecast_end_date=input["forecast_end_date"]
-            )
+            future = forecast_mgr.croston_forecast(df, input["forecast_start_date"], input["forecast_end_date"])
+            raise Exception()
 
         if future is None:
             raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail={"message": "Forecasting failed"})

@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 from fastapi import HTTPException
 from prophet import Prophet
+from statsforecast import StatsForecast
+from statsforecast.models import CrostonClassic, CrostonOptimized, CrostonSBA
 
 
 class ForecastOneInput(TypedDict):
@@ -95,101 +97,41 @@ class ForecastManager:
 
         return forecast
 
+
+
     def croston_forecast(
         self,
-        sales: pd.DataFrame,
+        data: pd.DataFrame,
         forecast_start_date: date,
         forecast_end_date: date,
-        alpha: float = 0.1
     ) -> pd.DataFrame:
-        """
-        Forecast using Croston’s method for intermittent demand,
-        limited to forecast_start_date → forecast_end_date range.
+        # Ensure proper columns
+        if not {"ds", "y"}.issubset(data.columns):
+            raise ValueError("Data must contain 'ds' (date) and 'y' (value) columns.")
 
-        Args:
-            sales (pd.DataFrame): Daily sales data (must have ['ds', 'y']).
-            forecast_start_date (date): First date to include in output.
-            forecast_end_date (date): Last date to include in output.
-            alpha (float): Smoothing parameter (default=0.1).
+        # Add unique_id for StatsForecast
+        data["unique_id"] = "product_1"
+        data["ds"] = pd.to_datetime(data["ds"])
+        data = data.sort_values("ds")
 
-        Returns:
-            pd.DataFrame: DataFrame with ['ds', 'forecast'].
-        """
-        if sales.empty:
-            raise HTTPException(409, {"message": "Sales data is empty — cannot forecast."})
+        # --- Initialize model ---
+        sf = StatsForecast(models=[CrostonOptimized()], freq="D")
 
-        if not {"ds", "y"}.issubset(sales.columns):
-            raise HTTPException(409, {"message": "Sales DataFrame must contain columns ['ds', 'y']."})
+        # --- Calculate forecast horizon (h) ---
+        last_date = data["ds"].max().date()
+        h = (forecast_end_date - last_date).days
 
-        df = sales.sort_values("ds").copy()
-        df["ds"] = pd.to_datetime(df["ds"])
-        df = df.set_index("ds")
+        if h <= 0:
+            raise ValueError("forecast_end_date must be after the last date in your data.")
 
-        # Ensure continuous daily frequency
-        full_idx = pd.date_range(df.index.min(), df.index.max(), freq="D")
-        df = df.reindex(full_idx, fill_value=0)
-        df.index.name = "ds"
+        # --- Forecast ---
+        forecasts = sf.forecast(df=data, h=h).reset_index() # pyright: ignore
 
-        # --- Croston’s algorithm ---
-        y = df["y"].values
-        demand, intervals = [], []
-        last_demand = 0
-        last_interval = 1
-        t = 1
+        # --- Filter to your desired forecast window ---
+        forecasts["ds"] = pd.to_datetime(forecasts["ds"])
+        mask = (forecasts["ds"].dt.date >= forecast_start_date) & (forecasts["ds"].dt.date <= forecast_end_date)
+        forecasts = forecasts.loc[mask]
 
-        for val in y:
-            if val > 0:
-                if last_demand == 0:
-                    z = val
-                    p = t
-                else:
-                    z = (1 - alpha) * last_demand + alpha * val
-                    p = (1 - alpha) * last_interval + alpha * t
-                last_demand, last_interval = z, p
-                t = 1
-            else:
-                t += 1
-            demand.append(last_demand)
-            intervals.append(last_interval)
+        print(forecasts)
+        return forecasts
 
-        df["z_t"] = demand
-        df["p_t"] = intervals
-        df["forecast"] = df["z_t"] / df["p_t"]
-
-        last_date = df.index.max().date() # pyright: ignore
-        days_to_forecast = (forecast_end_date - last_date).days # pyright: ignore
-
-        if days_to_forecast <= 0:
-            raise HTTPException(
-                409,
-                {"message": f"Forecast end date ({forecast_end_date}) must be after last sale date ({last_date})."}
-            )
-
-        # Forecast constant value for future days
-        future_idx = pd.date_range(
-            start=last_date + pd.Timedelta(days=1), # pyright: ignore
-            end=forecast_end_date,
-            freq="D",
-        ) 
-
-        future_forecast = np.full(len(future_idx), df["forecast"].iloc[-1])
-
-        forecast_df = pd.DataFrame({
-            "ds": future_idx,
-            "forecast": future_forecast
-        })
-
-        # --- Filter forecast window ---
-        forecast_df["ds"] = pd.to_datetime(forecast_df["ds"])
-        mask = (forecast_df["ds"].dt.date >= forecast_start_date) & (
-            forecast_df["ds"].dt.date <= forecast_end_date
-        )
-        forecast_df = forecast_df.loc[mask].reset_index(drop=True)
-
-        if forecast_df.empty:
-            raise HTTPException(
-                409,
-                {"message": "No forecast data falls within the specified date range."}
-            )
-
-        return forecast_df
