@@ -6,6 +6,7 @@ from forecasting_module.infra.database.repositories.forecast_repo import Forecas
 from forecasting_module.infra.database.repositories.product_repo import ProductRepository
 from forecasting_module.infra.database.repositories.product_setting_repo import ProductSettingRepository
 from forecasting_module.infra.database.repositories.sale_repo import SaleRepository
+from forecasting_module.infra.database.repositories.prophet_model_repo import ProphetModelRepository
 from forecasting_module.infra.web.forecasts.dto.generate_single_forecast import GenerateSingleForecastBody
 
 forecast_router = APIRouter()
@@ -24,12 +25,14 @@ async def generate_forecast(
             forecast_repo = ForecastRepository(cur)
             forecast_entry_repo = ForecastEntryRepository(cur)
             setting_repo= ProductSettingRepository(cur)
+            prophet_model_repo= ProphetModelRepository(cur)
             usecase = GenerateSingleForecastUsecase(
                 product_repo, 
                 sale_repo, 
                 forecast_repo, 
                 setting_repo, 
-                forecast_entry_repo
+                forecast_entry_repo,
+                prophet_model_repo
             )
             forecast_id = usecase.handle(
                 {

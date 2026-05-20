@@ -7,8 +7,17 @@ from forecasting_module.infra.database.repositories.forecast_repo import Forecas
 from forecasting_module.infra.database.repositories.product_repo import ProductRepository
 from forecasting_module.infra.database.repositories.product_setting_repo import ProductSettingRepository
 from forecasting_module.infra.database.repositories.sale_repo import SaleRepository
+from forecasting_module.infra.database.repositories.prophet_model_repo import ProphetModelRepository, ProphetModelSetting, build_default_prophet_settings, build_prophet_from_settings
 import pandas as pd
+import pickle
+from prophet import Prophet
+from pathlib import Path
+from datetime import datetime
 
+
+BASE_DIR = Path(__file__).resolve().parents[5]
+MODELS_DIR = BASE_DIR / "storage" / "models" / "prophet"
+MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
 class GenerateSingleForecastInput(TypedDict):
     forecast_id: str
@@ -28,13 +37,15 @@ class GenerateSingleForecastUsecase:
         sale_repo: SaleRepository, 
         forecast_repo: ForecastRepository, 
         setting_repo: ProductSettingRepository, 
-        forecast_entry_repo: ForecastEntryRepository 
+        forecast_entry_repo: ForecastEntryRepository ,
+        prophet_model_repo: ProphetModelRepository, 
     ) -> None: 
         self.product_repo = product_repo 
         self.sale_repo = sale_repo 
         self.forecast_repo = forecast_repo 
         self.forecast_entry_repo = forecast_entry_repo 
         self.setting_repo = setting_repo
+        self.prophet_model_repo= prophet_model_repo
 
     def handle(self, input: GenerateSingleForecastInput):
         product = self.product_repo.find_one_by_id(input["product_id"])
@@ -92,15 +103,33 @@ class GenerateSingleForecastUsecase:
         self.forecast_entry_repo.delete_entries_by_forecast_id(forecast.id)
         forecast_mgr = ForecastManager()
         if forecast.model_type == "prophet":
-            future = forecast_mgr.prophet_forecast(
-                model=None, 
-                sales=df, 
-                forecast_start_date=input["forecast_start_date"],
-                forecast_end_date=input["forecast_end_date"]
-            )
+            prophet_model_settings = self.prophet_model_repo.get_model_settings_by_product_id(product.id)
+            if prophet_model_settings is None:
+                prophet_model = self.prophet_model_repo.get_model_by_product_id(product.id)
+                model = Prophet()
+                future, trained_model = forecast_mgr.prophet_forecast(
+                    model=model,
+                    forecast_end_date=input["forecast_end_date"],
+                    forecast_start_date=input["forecast_start_date"],
+                    sales=df
+                )
+
+                # persist default settings AFTER training
+                default_settings = build_default_prophet_settings(
+                    prophet_model_id=prophet_model.id,
+                    model=model
+                )
+                self.prophet_model_repo.save_model_settings(default_settings)
+            else:
+                model = build_prophet_from_settings(prophet_model_settings)
+                future, trained_model = forecast_mgr.prophet_forecast(
+                    model=model,
+                    forecast_end_date=input["forecast_end_date"],
+                    forecast_start_date=input["forecast_start_date"],
+                    sales=df
+                )
         else:
             future = forecast_mgr.croston_forecast(df, input["forecast_start_date"], input["forecast_end_date"])
-            raise Exception()
 
         if future is None:
             raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail={"message": "Forecasting failed"})

@@ -32,8 +32,8 @@ class ForecastManager:
         sales: pd.DataFrame,
         forecast_start_date: date,
         forecast_end_date: date,
-        model: Prophet | None = None
-    ) -> pd.DataFrame:
+        model: Prophet
+    )-> tuple[pd.DataFrame, Prophet] :
         """
         Generate a Prophet forecast between forecast_start_date and forecast_end_date.
 
@@ -57,11 +57,9 @@ class ForecastManager:
 
         df = sales.sort_values("ds").copy()
         df["ds"] = pd.to_datetime(df["ds"])
-
-        # Fit model
-        if model is None:
-            model = Prophet()
-            model.fit(df)
+        
+        model.fit(df)
+            
 
         last_date = df["ds"].max().date()
         days_to_forecast = (forecast_end_date - last_date).days
@@ -95,7 +93,7 @@ class ForecastManager:
                 {"message": "No forecast data falls within the specified date range."}
             )
 
-        return forecast
+        return forecast, model
 
 
 
