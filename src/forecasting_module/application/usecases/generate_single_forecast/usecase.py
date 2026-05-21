@@ -9,7 +9,6 @@ from forecasting_module.infra.database.repositories.product_setting_repo import 
 from forecasting_module.infra.database.repositories.sale_repo import SaleRepository
 from forecasting_module.infra.database.repositories.prophet_model_repo import ProphetModelRepository, ProphetModelSetting, build_default_prophet_settings, build_prophet_from_settings
 import pandas as pd
-import pickle
 from prophet import Prophet
 from pathlib import Path
 from datetime import datetime
